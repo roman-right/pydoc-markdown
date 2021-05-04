@@ -29,6 +29,36 @@ import html
 import io
 import sys
 
+def format_arglist(args: List[Argument]) -> str:
+  """
+  Formats a Python argument list.
+  """
+
+  result = []
+
+  for arg in args:
+    parts = []
+    # if arg.type == Argument.Type.KeywordOnly and '*' not in result:
+    #   result.append('*')
+    parts = [arg.name]
+    if arg.datatype:
+      parts.append(': ' + arg.datatype)
+    if arg.default_value:
+      if arg.datatype:
+        parts.append(' ')
+      parts.append('=')
+    if arg.default_value:
+      if arg.datatype:
+        parts.append(' ')
+      parts.append(arg.default_value)
+    if arg.type == Argument.Type.PositionalRemainder:
+      parts.insert(0, '*')
+    elif arg.type == Argument.Type.KeywordRemainder:
+      parts.insert(0, '**')
+    parts.insert(0, "\n\t")
+    result.append(''.join(parts))
+
+  return ', '.join(result) + "\n"
 
 @implements(Renderer)
 class MarkdownRenderer(Struct):
@@ -50,7 +80,7 @@ class MarkdownRenderer(Struct):
 
   #: If enabled, inserts anchors before Markdown headers to ensure that
   #: links to the header work. This is enabled by default.
-  insert_header_anchors = Field(bool, default=True)
+  insert_header_anchors = Field(bool, default=False)
 
   #: Generate HTML headers instead of Mearkdown headers. This is disabled
   #: by default.
@@ -62,7 +92,7 @@ class MarkdownRenderer(Struct):
 
   #: Generate descriptive class titles by adding the word "Objects" after
   #: the class name. This is enabled by default.
-  descriptive_class_title = Field(bool, default=True)
+  descriptive_class_title = Field(bool, default=False)
 
   #: Generate descriptivie module titles by adding the word "Module" before
   #: the module name. This is enabled by default.
@@ -119,7 +149,7 @@ class MarkdownRenderer(Struct):
 
   #: Include the "def" keyword in the function signature. This is enabled
   #: by default.
-  signature_with_def = Field(bool, default=False)
+  signature_with_def = Field(bool, default=True)
 
   #: Render the class name in the code block for function signature. Note
   #: that this results in invalid Python syntax to be rendered. This is
@@ -159,9 +189,9 @@ class MarkdownRenderer(Struct):
   header_level_by_type = Field({int}, default={
     'Module': 1,
     'Class': 2,
-    'Method': 4,
-    'Function': 4,
-    'Data': 4,
+    'Method': 3,
+    'Function': 3,
+    'Data': 3,
   })
 
   #: A plugin that implements the #SourceLinker interface to provide links to the
@@ -236,7 +266,7 @@ class MarkdownRenderer(Struct):
     for dec in decorations:
       yield '@{}{}\n'.format(dec.name, dec.args or '')
 
-  def _format_function_signature(self, func: docspec.Function, override_name: str = None, add_method_bar: bool = True) -> str:
+  def _format_function_signature(self, func: docspec.Function, override_name: str = None, add_method_bar: bool = False) -> str:
     parts: List[str] = []
     if self.signature_with_decorators:
       parts += self._format_decorations(func.decorations)
